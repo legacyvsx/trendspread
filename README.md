@@ -33,5 +33,5 @@ Make sure your API keys and paths are correctly listed at the top of each php fi
 
 </pre>
 <br/><br/>
-You can find me at <a href="https://x.com/h45hb4ng">@h45hb4ng</a> or check some of my other work at morallyrelative.com
+You can find me at <a href="https://x.com/h45hb4ng">@h45hb4ng</a> or check some of my other work at https://morallyrelative.com
 </p>
