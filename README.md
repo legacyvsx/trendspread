@@ -7,7 +7,7 @@ TrendSpread is a php app that tracks worldwide search trends via Google Trends a
   <li>A pie chart which categorizes each of the trends into weather, sports, entertainment, finance/business, politics/news, technology, other.</li>
 </ul>
 <br/><br/>
-It requires API keys from xAI and this 3rd party API from RapidAPI for Google Trends data: https://rapidapi.com/superbapi-superbapi-default/ - generating the heatmap requires the basic plan, everything else can be done on the free plan.<br/>
+It requires API keys from xAI and this 3rd party API from RapidAPI for Google Trends data: [https://rapidapi.com/superbapi-superbapi-default/](https://rapidapi.com/superbapi-superbapi-default/api/google-trends-api4) - generating the heatmap requires the basic plan, everything else can be done on the free plan.<br/>
 I'm using a 3rd party API because pytrends stopped working a few months ago and Google doesn't have an official API that's public (though you can request access I believe). <br/><br/>
 
 Make sure your API keys and paths are correctly listed at the top of each php file. You'll want to run these scripts in a crontab to automatically update daily. Here is mine:<br/><br/>
