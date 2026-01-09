@@ -2,9 +2,9 @@
 
 TrendSpread is a php app that tracks worldwide search trends via Google Trends and creates some interesting visualizations:</br>
 <ul>
-  <li>A heatmap showing how trends spread between countries (on a given day).</li>
-  <li>A word cloud of trends from that day. </li>
-  <li>A pie chart which categorizes each of the trends into weather, sports, entertainment, finance/business, politics/news, technology, other.</li>
+  <li>A heatmap showing how trends spread between countries (on a given day) (uses OpenStreetMap/Leaflet.js).</li>
+  <li>A word cloud of trends from that day (created with ChartJS). </li>
+  <li>A pie chart which categorizes each of the trends into weather, sports, entertainment, finance/business, politics/news, technology, other (created with quickchart.io, no API key needed).</li>
 </ul>
 <br/><br/>
 It requires API keys from xAI and this 3rd party API from RapidAPI for Google Trends data: [https://rapidapi.com/superbapi-superbapi-default/](https://rapidapi.com/superbapi-superbapi-default/api/google-trends-api4) - generating the heatmap requires the basic plan, everything else can be done on the free plan.<br/>
