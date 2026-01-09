@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrendSpread - Global Trends Heatmap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        /* Top Menu Bar */
+        .menu-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #2c3e50;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            z-index: 2000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .menu-bar h1 {
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            margin-right: auto;
+            white-space: nowrap;
+        }
+        
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 10px;
+            gap: 5px;
+        }
+        
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: white;
+            transition: 0.3s;
+        }
+        
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+        
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+        
+        /* Desktop Navigation */
+        .menu-bar nav {
+            display: flex;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+        
+        .menu-bar a,
+        .menu-bar button {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        
+        .menu-bar a:hover,
+        .menu-bar button:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Map Container */
+        #map-container {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        
+        #map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 85vh;
+            overflow: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .modal-content.large {
+            max-width: 95vw;
+        }
+        
+        .modal-content.table-container {
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .modal-content iframe {
+            width: 100%;
+            border: none;
+            display: block;
+        }
+        
+        .modal-content iframe.table {
+            height: 600px;
+        }
+        
+        .modal-content iframe.wordcloud {
+            height: 700px;
+        }
+        
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            z-index: 10;
+            border-radius: 50%;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+            background: #f0f0f0;
+        }
+        
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .modal-content p {
+            line-height: 1.6;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .menu-bar {
+                padding: 0 10px;
+                height: 50px;
+            }
+            
+            .menu-bar h1 {
+                font-size: 16px;
+            }
+            
+            .hamburger {
+                display: flex;
+            }
+            
+            .menu-bar nav {
+                position: fixed;
+                top: 50px;
+                left: 0;
+                right: 0;
+                background: #2c3e50;
+                flex-direction: column;
+                gap: 0;
+                max-height: 0;
+                overflow: hidden;
+                transition: max-height 0.3s ease;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            }
+            
+            .menu-bar nav.active {
+                max-height: 400px;
+            }
+            
+            .menu-bar a,
+            .menu-bar button {
+                text-align: left;
+                width: 100%;
+                padding: 15px 20px;
+                border-radius: 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            
+            #map-container {
+                top: 50px;
+            }
+            
+            .modal-content {
+                padding: 30px 15px;
+                max-height: 90vh;
+            }
+            
+            .modal-content.table-container {
+                padding: 0;
+            }
+            
+            .modal-content h2 {
+                font-size: 18px;
+                padding: 0 15px;
+            }
+            
+            .modal-content iframe.table {
+                height: 500px;
+            }
+            
+            .modal-content iframe.wordcloud {
+                height: 500px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .menu-bar {
+                height: 45px;
+            }
+            
+            .menu-bar h1 {
+                font-size: 14px;
+            }
+            
+            .menu-bar nav {
+                top: 45px;
+            }
+            
+            #map-container {
+                top: 45px;
+            }
+            
+            .modal-content {
+                padding: 20px 10px;
+            }
+            
+            .modal-content.table-container {
+                padding: 0;
+            }
+            
+            .modal-content iframe.table {
+                height: 400px;
+            }
+            
+            .modal-content iframe.wordcloud {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Menu Bar -->
+    <div class="menu-bar">
+        <h1>TrendSpread</h1>
+        <div class="hamburger" onclick="toggleMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <nav id="mainNav">
+            <button onclick="goHome()">Home</button>
+            <button onclick="openAbout()">About</button>
+            <button onclick="openDailySpread()">Daily Spread</button>
+            <button onclick="openWordCloud()">Word Cloud</button>
+            <button onclick="openPieChart()">Pie Chart</button>
+            <a href="#" target="_blank" id="archiveLink">Archive</a>
+            <a href="#" target="_blank" id="sourceLink">Source</a>
+        </nav>
+    </div>
+    
+    <!-- Map Container -->
+    <div id="map-container">
+        <iframe id="heatmap-iframe" src="trend_heatmap.html"></iframe>
+    </div>
+    
+    <!-- About Modal -->
+    <div class="modal-overlay" id="aboutModal" onclick="closeModal(event, 'aboutModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeAbout()">&times;</button>
+            <h2>About TrendSpread</h2>
+            <p>
+                <!-- TODO: Add your about text here -->
+                TrendSpread is an app/website that tracks worldwide search trends (keywords/phrases) via Google Trends and creates interesting visualizations with the data: 
+		1) a heatmap showing how each trend spreads between countries over the course of a day, 2) a word cloud of keywords, and 3) a pie chart categorizing each of those keywords. 
+		All of the data is automatically updated each day and posted to X at <a href="https://x.com/h45hb4ng_data">@h45hb4ng_data</a>. 
+		This also serves as an archive if you would like to see data for a previous day. It is fully open source (click Source menu item).
+            </p>
+            <p>
+                You can contact me at <a href="https://x.com/h45hb4ng">@h45hb4ng</a> or hi[at]trendspread.global
+            </p>
+        </div>
+    </div>
+    
+    <!-- Daily Spread Modal -->
+    <div class="modal-overlay" id="dailySpreadModal" onclick="closeModal(event, 'dailySpreadModal')">
+        <div class="modal-content large table-container" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeDailySpread()">&times;</button>
+            <iframe id="dailySpreadFrame" src="top10_trends_spread.html" class="table"></iframe>
+        </div>
+    </div>
+    
+    <!-- Word Cloud Modal -->
+    <div class="modal-overlay" id="wordCloudModal" onclick="closeModal(event, 'wordCloudModal')">
+        <div class="modal-content large" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeWordCloud()">&times;</button>
+            <iframe id="wordCloudFrame" src="wordcloud.html" class="wordcloud" scrolling="yes"></iframe>
+        </div>
+    </div>
+    
+    <!-- Pie Chart Modal -->
+    <div class="modal-overlay" id="pieChartModal" onclick="closeModal(event, 'pieChartModal')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closePieChart()">&times;</button>
+            <img id="pieChartImg" src="category_piechart.png" alt="Category Pie Chart">
+        </div>
+    </div>
+    
+    <script>
+        // TODO: Set your external URLs here
+        document.getElementById('archiveLink').href = 'https://x.com/h45hb4ng_data';
+        document.getElementById('sourceLink').href = 'https://github.com/legacyvsx/trendspread';
+        
+        function toggleMenu() {
+            const hamburger = document.querySelector('.hamburger');
+            const nav = document.getElementById('mainNav');
+            hamburger.classList.toggle('active');
+            nav.classList.toggle('active');
+        }
+        
+        function closeMenu() {
+            const hamburger = document.querySelector('.hamburger');
+            const nav = document.getElementById('mainNav');
+            hamburger.classList.remove('active');
+            nav.classList.remove('active');
+        }
+        
+        function goHome() {
+            closeMenu();
+            closeAllModals();
+            
+            // Reset the heatmap to top trend by reloading the iframe
+            const iframe = document.getElementById('heatmap-iframe');
+            iframe.src = iframe.src; // Reload iframe
+        }
+        
+        function openAbout() {
+            closeMenu();
+            closeAllModals();
+            document.getElementById('aboutModal').classList.add('active');
+        }
+        
+        function closeAbout() {
+            document.getElementById('aboutModal').classList.remove('active');
+        }
+        
+        function openDailySpread() {
+            closeMenu();
+            closeAllModals();
+            // Force reload with cache buster
+            const iframe = document.getElementById('dailySpreadFrame');
+            iframe.src = 'top10_trends_spread.html?t=' + new Date().getTime();
+            document.getElementById('dailySpreadModal').classList.add('active');
+        }
+        
+        function closeDailySpread() {
+            document.getElementById('dailySpreadModal').classList.remove('active');
+        }
+        
+        function openWordCloud() {
+            closeMenu();
+            closeAllModals();
+            // Force reload with cache buster
+            const iframe = document.getElementById('wordCloudFrame');
+            iframe.src = 'wordcloud.html?t=' + new Date().getTime();
+            document.getElementById('wordCloudModal').classList.add('active');
+        }
+        
+        function closeWordCloud() {
+            document.getElementById('wordCloudModal').classList.remove('active');
+        }
+        
+        function openPieChart() {
+            closeMenu();
+            closeAllModals();
+            // Force reload with cache buster
+            const img = document.getElementById('pieChartImg');
+            img.src = 'category_piechart.png?t=' + new Date().getTime();
+            document.getElementById('pieChartModal').classList.add('active');
+        }
+        
+        function closePieChart() {
+            document.getElementById('pieChartModal').classList.remove('active');
+        }
+        
+        function closeAllModals() {
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+        
+        function closeModal(event, modalId) {
+            // Close modal if clicking on overlay (not content)
+            if (event.target.classList.contains('modal-overlay')) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+        }
+        
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAllModals();
+            }
+        });
+    </script>
+</body>
+</html>
