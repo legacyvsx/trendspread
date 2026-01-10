@@ -133,13 +133,14 @@ foreach ($allTrends as $keyword => $countries) {
         $latestTime = max($firstSeenTimes);
         
         // Find first country (country with earliest appearance)
-        $firstCountry = '';
+       // Find ALL countries with earliest appearance
+        $firstCountries = [];
         foreach ($countries as $country => $data) {
             if ($data['first_seen'] === $earliestTime) {
-                $firstCountry = $country;
-                break;
+                $firstCountries[] = $country;
             }
         }
+        $firstCountry = implode(', ', $firstCountries);
         
         $totalVolume = array_sum(array_column($countries, 'volume'));
         
