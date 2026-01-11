@@ -154,11 +154,15 @@ foreach ($allTrends as $keyword => $countries) {
         }
         $firstCountry = implode(', ', $firstCountries);
         
+        // Calculate how many NEW countries it spread to (total - starting countries)
+        $spreadToCount = $countryCount - count($firstCountries);
+        
         $totalVolume = array_sum(array_column($countries, 'volume'));
         
         $spreadingTrends[$keyword] = [
             'countries' => $countries,
             'country_count' => $countryCount,
+            'spread_to_count' => $spreadToCount,
             'total_volume' => $totalVolume,
             'earliest_appearance' => $earliestTime,
             'latest_appearance' => $latestTime,
@@ -167,9 +171,9 @@ foreach ($allTrends as $keyword => $countries) {
     }
 }
 
-// Sort by country count (most spread first)
+// Sort by spread_to_count (most spread first)
 uasort($spreadingTrends, function($a, $b) {
-    return $b['country_count'] - $a['country_count'];
+    return $b['spread_to_count'] - $a['spread_to_count'];
 });
 
 echo "Found " . count($spreadingTrends) . " spreading trends\n\n";
@@ -197,9 +201,9 @@ echo str_repeat("=", 60) . "\n";
 $top10 = array_slice($spreadingTrends, 0, 10, true);
 
 foreach ($top10 as $keyword => $data) {
-    echo sprintf("%-40s %3d countries  %8d volume\n", 
+    echo sprintf("%-40s %3d add'l countries  %8d volume\n", 
         substr($keyword, 0, 40), 
-        $data['country_count'], 
+        $data['spread_to_count'], 
         $data['total_volume']
     );
     echo "  First: {$data['earliest_appearance']} -> Last: {$data['latest_appearance']}\n";
@@ -351,7 +355,7 @@ $html = '<!DOCTYPE html>
             <tr>
                 <th>Search Keyword</th>
                 <th>First Country</th>
-                <th style="text-align: center;"># of Countries Spread To</th>
+                <th style="text-align: center;"># of Add\'l Countries Spread To</th>
                 <th style="text-align: right;">Search Volume</th>
             </tr>
         </thead>
@@ -362,7 +366,7 @@ foreach ($top10 as $keyword => $data) {
     $html .= '            <tr>
                 <td class="keyword">' . htmlspecialchars($keyword) . '</td>
                 <td><span class="country">' . htmlspecialchars($data['first_country']) . '</span></td>
-                <td class="count">' . $data['country_count'] . '</td>
+                <td class="count">' . $data['spread_to_count'] . '</td>
                 <td class="volume">' . formatVolume($data['total_volume']) . '</td>
             </tr>
 ';
