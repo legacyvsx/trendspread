@@ -1,7 +1,7 @@
 <?php
 // process_daily_spread.php - Analyze trend spread across countries
 
-$baseDir = '';
+$baseDir = '/var/www/morallyrelative.com/trends';
 $hourlyDir = "$baseDir/hourly";
 $spreadDir = "$baseDir/spread";
 
@@ -28,8 +28,20 @@ usort($allFiles, function($a, $b) {
     return filemtime($b) - filemtime($a);
 });
 
-// Take the 5 most recent files
-$files = array_slice($allFiles, 0, 5);
+// Get current date for filtering
+$targetDate = date('Y-m-d');
+
+// Filter to only files from today
+$todayFiles = array_filter($allFiles, function($file) use ($targetDate) {
+    return strpos(basename($file), $targetDate) === 0;
+});
+
+// Take the 5 most recent from today (or however many exist)
+$files = array_slice($todayFiles, 0, 5);
+
+if (empty($files)) {
+    die("ERROR: No hourly data files found for today ($targetDate)\n");
+}
 
 // Sort chronologically for processing (oldest to newest)
 usort($files, function($a, $b) {
@@ -42,13 +54,6 @@ foreach ($files as $file) {
     echo "  - " . basename($file) . " (modified: $time)\n";
 }
 echo "\n";
-
-// Determine date for output filename (use date from oldest file)
-if (preg_match('/(\d{4}-\d{2}-\d{2})/', basename($files[0]), $matches)) {
-    $targetDate = $matches[1];
-} else {
-    $targetDate = date('Y-m-d');
-}
 
 echo "Output date: $targetDate\n\n";
 
@@ -132,8 +137,7 @@ foreach ($allTrends as $keyword => $countries) {
         $earliestTime = min($firstSeenTimes);
         $latestTime = max($firstSeenTimes);
         
-        // Find first country (country with earliest appearance)
-       // Find ALL countries with earliest appearance
+        // Find ALL countries with earliest appearance
         $firstCountries = [];
         foreach ($countries as $country => $data) {
             if ($data['first_seen'] === $earliestTime) {
@@ -215,7 +219,7 @@ $html = '<!DOCTYPE html>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Top 10 Spreading Trends - ' . $targetDate . '</title>
-	<style>
+    <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             max-width: 1200px;
