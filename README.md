@@ -34,6 +34,6 @@ Make sure your API keys and paths are correctly listed at the top of each php fi
 </pre>
 <br/><br/>
 If you want daily data that can be viewed separately, it'll be in top10_trends_spread.html, wordcloud.html, and category_piechart.png, all of which update daily (assuming you run this in a crontab as above). 
-You can find me at <a href="https://x.com/h45hb4ng">@h45hb4ng</a> or check some of my other work at https://morallyrelative.com<br/><br/>
+<br/><br/>You can find me at <a href="https://x.com/h45hb4ng">@h45hb4ng</a> or check out some of my other work at https://morallyrelative.com<br/><br/>
 https://trendspread.global | data posted to <a href="https://x.com/h45hb4ng_data">@h45hb4ng_data</a>
 </p>
