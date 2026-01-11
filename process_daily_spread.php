@@ -123,8 +123,8 @@ foreach ($files as $file) {
 
 echo "\nTotal unique keywords across all snapshots: " . count($allTrends) . "\n\n";
 
-// STEP 2: Identify spreading trends (appeared in 2+ countries)
-echo "Identifying spreading trends (2+ countries)...\n";
+// STEP 2: Identify spreading trends (appeared in 2+ countries AND 2+ snapshots)
+echo "Identifying spreading trends (2+ countries, 2+ snapshots)...\n";
 
 $spreadingTrends = [];
 
@@ -136,6 +136,14 @@ foreach ($allTrends as $keyword => $countries) {
         $firstSeenTimes = array_column($countries, 'first_seen');
         $earliestTime = min($firstSeenTimes);
         $latestTime = max($firstSeenTimes);
+        
+        // Get unique timestamps to see how many different snapshots this appeared in
+        $uniqueTimes = array_unique($firstSeenTimes);
+        
+        // Skip if appeared in only one snapshot (not actually spreading)
+        if (count($uniqueTimes) < 2) {
+            continue;
+        }
         
         // Find ALL countries with earliest appearance
         $firstCountries = [];
