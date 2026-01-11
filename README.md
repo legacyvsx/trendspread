@@ -1,6 +1,6 @@
 <b>TrendSpread</b><p>
 
-TrendSpread is a php app that tracks worldwide search trends via Google Trends and creates some interesting visualizations:</br>
+TrendSpread.global is a php app that tracks worldwide search trends via Google Trends and creates some interesting visualizations:</br>
 <ul>
   <li>A heatmap showing how trends spread between countries (on a given day) (uses OpenStreetMap/Leaflet.js).</li>
   <li>A word cloud of trends from that day (created with ChartJS). </li>
