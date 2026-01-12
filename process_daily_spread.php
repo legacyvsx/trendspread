@@ -1,7 +1,7 @@
 <?php
 // process_daily_spread.php - Analyze trend spread across countries
 
-$baseDir = '/var/www/morallyrelative.com/trends';
+$baseDir = '';
 $hourlyDir = "$baseDir/hourly";
 $spreadDir = "$baseDir/spread";
 
