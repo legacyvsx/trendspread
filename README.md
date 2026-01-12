@@ -14,22 +14,22 @@ Make sure your API keys and paths are correctly listed at the top of each php fi
 
 <pre>
 # Daily trends pipeline (for word cloud/pie chart) - Run BEFORE hourly scrapes
-0 0 * * * php /var/www/morallyrelative.com/trends/scrape_trends.php >> ~/logs/trends_daily.log 2>&1
-3 0 * * * php /var/www/morallyrelative.com/trends/filter_trends.php >> ~/logs/trends_daily.log 2>&1
-8 0 * * * php /var/www/morallyrelative.com/trends/cleanup_duplicates.php >> ~/logs/trends_daily.log 2>&1
-10 0 * * * php /var/www/morallyrelative.com/trends/generate_wordcloud_chartjs.php >> ~/logs/trends_daily.log 2>&1
-11 0 * * * php /var/www/morallyrelative.com/trends/categorize_and_chart.php >> ~/logs/trends_daily.log 2>&1
+0 0 * * * php scrape_trends.php >> ~/logs/trends_daily.log 2>&1
+3 0 * * * php filter_trends.php >> ~/logs/trends_daily.log 2>&1
+8 0 * * * php cleanup_duplicates.php >> ~/logs/trends_daily.log 2>&1
+10 0 * * * php generate_wordcloud_chartjs.php >> ~/logs/trends_daily.log 2>&1
+11 0 * * * php categorize_and_chart.php >> ~/logs/trends_daily.log 2>&1
 
 # Hourly scraper (for heatmap) - Starts at 12:05 AM, doesn't conflict
-5 0 * * * php /var/www/morallyrelative.com/trends/scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
-0 6 * * * php /var/www/morallyrelative.com/trends/scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
-0 12 * * * php /var/www/morallyrelative.com/trends/scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
-0 18 * * * php /var/www/morallyrelative.com/trends/scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
-55 23 * * * php /var/www/morallyrelative.com/trends/scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
+5 0 * * * php scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
+0 6 * * * php scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
+0 12 * * * php scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
+0 18 * * * php scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
+55 23 * * * php scrape_trends_hourly.php >> ~/logs/trends_hourly.log 2>&1
 
 # Spread analysis (uses hourly data)
-58 23 * * * php /var/www/morallyrelative.com/trends/process_daily_spread.php >> ~/logs/trends_spread.log 2>&1
-59 23 * * * php /var/www/morallyrelative.com/trends/generate_heatmap.php >> ~/logs/trends_heatmap.log 2>&1
+58 23 * * * php process_daily_spread.php >> ~/logs/trends_spread.log 2>&1
+59 23 * * * php generate_heatmap.php >> ~/logs/trends_heatmap.log 2>&1
 
 </pre>
 <br/><br/>
