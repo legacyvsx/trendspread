@@ -1,9 +1,7 @@
 <?php
-// scrape_trends_hourly.php - Scrape, filter, and clean trends 4x daily
+// scrape_trends_hourly.php - Scrape current Google Trends from 125 countries
 
-$rapidApiKey = '';
-$grokApiKey = '';
-$baseDir = '';
+$baseDir = '/var/www/morallyrelative.com/trends';
 $hourlyDir = "$baseDir/hourly";
 
 // Create hourly directory if it doesn't exist
@@ -11,45 +9,58 @@ if (!is_dir($hourlyDir)) {
     mkdir($hourlyDir, 0755, true);
 }
 
-// Generate timestamp for this scrape
-$timestamp = date('Y-m-d-H');
-$rawFile = "$hourlyDir/$timestamp-raw.log";
-$cleanFile = "$hourlyDir/$timestamp.log";
+// Configuration
+$rapidApiKey = '';
+$grokApiKey = '';
 
-echo "Starting hourly trends scrape at " . date('Y-m-d H:i:s') . "\n";
-echo "Output: $cleanFile\n\n";
-
-// All 125 countries supported by Google Trends
+// All country codes we want to scrape
 $countries = [
-    'AE', 'AL', 'AM', 'AO', 'AR', 'AT', 'AU', 'AZ', 'BA', 'BD', 'BE', 'BG', 'BH', 'BO', 'BR', 'BW',
-    'CA', 'CH', 'CI', 'CL', 'CM', 'CO', 'CR', 'CY', 'CZ', 'DE', 'DK', 'DO', 'DZ', 'EC', 'EE', 'EG',
-    'ES', 'ET', 'FI', 'FR', 'GB', 'GE', 'GH', 'GR', 'GT', 'HK', 'HN', 'HR', 'HU', 'ID', 'IE', 'IL',
-    'IN', 'IQ', 'IS', 'IT', 'JM', 'JO', 'JP', 'KE', 'KG', 'KH', 'KR', 'KW', 'KZ', 'LA', 'LB', 'LK',
-    'LT', 'LU', 'LV', 'LY', 'MA', 'MD', 'ME', 'MG', 'MK', 'MM', 'MN', 'MO', 'MT', 'MU', 'MW', 'MX',
-    'MY', 'MZ', 'NA', 'NG', 'NI', 'NL', 'NO', 'NP', 'NZ', 'OM', 'PA', 'PE', 'PH', 'PK', 'PL', 'PR',
-    'PT', 'PY', 'QA', 'RO', 'RS', 'SA', 'SE', 'SG', 'SI', 'SK', 'SN', 'SV', 'TH', 'TN', 'TR', 'TT',
-    'TW', 'TZ', 'UA', 'UG', 'US', 'UY', 'UZ', 'VE', 'VN', 'YE', 'ZA', 'ZM', 'ZW'
+    'US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'IT', 'ES', 'NL',
+    'SE', 'NO', 'DK', 'FI', 'PL', 'RO', 'GR', 'PT', 'BE', 'AT',
+    'CH', 'IE', 'CZ', 'HU', 'BG', 'SK', 'HR', 'SI', 'LT', 'LV',
+    'EE', 'CY', 'MT', 'LU', 'IS', 'BR', 'MX', 'AR', 'CO', 'CL',
+    'PE', 'VE', 'EC', 'GT', 'CU', 'BO', 'DO', 'HN', 'PY', 'SV',
+    'NI', 'CR', 'PA', 'UY', 'JM', 'TT', 'GY', 'SR', 'BZ', 'BB',
+    'BS', 'LC', 'GD', 'VC', 'AG', 'DM', 'KN', 'JP', 'CN', 'KR',
+    'TW', 'HK', 'SG', 'MY', 'TH', 'ID', 'PH', 'VN', 'BD', 'PK',
+    'LK', 'MM', 'KH', 'LA', 'NP', 'AF', 'MV', 'BT', 'MN', 'KP',
+    'RU', 'UA', 'BY', 'KZ', 'UZ', 'TM', 'KG', 'TJ', 'GE', 'AM',
+    'AZ', 'TR', 'SA', 'AE', 'IL', 'IQ', 'IR', 'JO', 'LB', 'SY',
+    'YE', 'OM', 'KW', 'BH', 'QA', 'EG', 'DZ', 'MA', 'TN', 'LY',
+    'SD', 'ET', 'KE', 'TZ', 'UG', 'ZA', 'NG', 'GH', 'CI', 'SN',
+    'ML', 'BF', 'NE', 'TD', 'SO', 'MZ', 'MW', 'ZM', 'ZW', 'BW',
+    'NA', 'AO', 'CD', 'CG', 'GA', 'CM', 'CF', 'RW', 'BI', 'DJ',
+    'ER', 'GM', 'GN', 'GW', 'LR', 'SL', 'MR', 'TG', 'BJ', 'GQ',
+    'ST', 'CV', 'KM', 'SC', 'MU', 'MG', 'RE', 'YT', 'LS', 'SZ'
 ];
 
-echo "Scraping " . count($countries) . " countries...\n\n";
+$timestamp = date('Y-m-d H:i:s');
+$dateHour = date('Y-m-d-H');
+$rawOutputFile = "$hourlyDir/$dateHour-raw.log";
 
-// STEP 1: Scrape raw trends
-$rawTrends = [];
-$errors = 0;
+echo "Google Trends Hourly Scraper\n";
+echo str_repeat("=", 60) . "\n";
+echo "Timestamp: $timestamp\n";
+echo "Countries to scrape: " . count($countries) . "\n";
+echo "Output file: $rawOutputFile\n\n";
 
-file_put_contents($rawFile, "# Raw Hourly Trends: " . date('Y-m-d H:i:s') . "\n");
-file_put_contents($rawFile, "# Format: TIMESTAMP\tCOUNTRY\tKEYWORD\tVOLUME\n", FILE_APPEND);
+// STEP 1: Scrape from all countries
+echo "Scraping trends from " . count($countries) . " countries...\n";
+
+$allTrends = [];
+$successCount = 0;
+$errorCount = 0;
 
 foreach ($countries as $country) {
-    echo "Fetching $country... ";
+    echo "  Fetching $country... ";
     
-    $ch = curl_init("https://google-trends-api4.p.rapidapi.com/api/v3/trends/nows?geo=$country");
-    
+    $ch = curl_init();
     curl_setopt_array($ch, [
+        CURLOPT_URL => "https://google-trends-api3.p.rapidapi.com/trendingnow?geo=$country",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
-            "x-rapidapi-host: google-trends-api4.p.rapidapi.com",
-            "x-rapidapi-key: $rapidApiKey"
+            'x-rapidapi-host: google-trends-api3.p.rapidapi.com',
+            'x-rapidapi-key: ' . $rapidApiKey
         ],
         CURLOPT_TIMEOUT => 30
     ]);
@@ -60,81 +71,74 @@ foreach ($countries as $country) {
     
     if ($httpCode !== 200) {
         echo "ERROR (HTTP $httpCode)\n";
-        $errors++;
+        $errorCount++;
         continue;
     }
     
     $data = json_decode($response, true);
     
-    // TrendsNows: trendingNows[] at root level
-    if (!isset($data['trendingNows']) || !is_array($data['trendingNows'])) {
-        echo "NO TRENDS\n";
+    if (!isset($data['data']) || !is_array($data['data'])) {
+        echo "ERROR (no data)\n";
+        $errorCount++;
         continue;
     }
     
-    $count = 0;
-    foreach ($data['trendingNows'] as $trend) {
-        if ($count >= 10) {
-        	break;
-    	}
-	$keyword = $trend['keyword'] ?? '';
-        $volume = $trend['searchVolume'] ?? 0;
-        
-        if (empty($keyword)) continue;
-        
-        // Decode HTML entities
-        $keyword = html_entity_decode($keyword, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        
-        // Volume is already numeric
-        $volume = (int)$volume;
-        
-        // Store for filtering
-        $rawTrends[] = [
-            'timestamp' => date('Y-m-d H:i:s'),
+    // Take top 10 trends per country
+    $trends = array_slice($data['data'], 0, 10);
+    
+    foreach ($trends as $trend) {
+        $allTrends[] = [
+            'timestamp' => $timestamp,
             'country' => $country,
-            'keyword' => $keyword,
-            'volume' => $volume
+            'keyword' => $trend['title'] ?? '',
+            'volume' => $trend['formattedTraffic'] ?? '0'
         ];
-        
-        // Write to raw file
-        $line = date('Y-m-d H:i:s') . "\t$country\t$keyword\t$volume\n";
-        file_put_contents($rawFile, $line, FILE_APPEND);
-        
-        $count++;
     }
     
-    echo "$count trends\n";
-    usleep(100000); // 0.1 second delay
+    $successCount++;
+    echo "OK (" . count($trends) . " trends)\n";
+    
+    usleep(100000); // 100ms delay between requests
 }
 
-echo "\nTotal raw trends: " . count($rawTrends) . "\n";
-echo "Errors: $errors\n\n";
+echo "\nScraping complete:\n";
+echo "  Success: $successCount countries\n";
+echo "  Errors: $errorCount countries\n";
+echo "  Total trends collected: " . count($allTrends) . "\n\n";
 
-// STEP 2: Filter for English using Grok
+// Save raw data
+echo "Saving raw data to $rawOutputFile...\n";
+$fp = fopen($rawOutputFile, 'w');
+fwrite($fp, "# Raw Google Trends data\n");
+fwrite($fp, "# Scraped at: $timestamp\n");
+fwrite($fp, "# Format: TIMESTAMP\\tCOUNTRY\\tKEYWORD\\tVOLUME\n");
+
+foreach ($allTrends as $trend) {
+    fwrite($fp, implode("\t", [
+        $trend['timestamp'],
+        $trend['country'],
+        $trend['keyword'],
+        $trend['volume']
+    ]) . "\n");
+}
+
+fclose($fp);
+echo "Raw data saved (" . count($allTrends) . " entries)\n\n";
+
+// STEP 2: Filter for English keywords using Grok
 echo "Filtering for English keywords using Grok AI...\n";
 
-$uniqueKeywords = array_unique(array_column($rawTrends, 'keyword'));
-echo "Unique keywords to filter: " . count($uniqueKeywords) . "\n";
+$keywords = array_unique(array_column($allTrends, 'keyword'));
+echo "Unique keywords to check: " . count($keywords) . "\n";
 
-// Filter in batches of 100
-$batchSize = 100;
-$batches = array_chunk($uniqueKeywords, $batchSize);
 $englishKeywords = [];
+$batchSize = 100;
+$batches = array_chunk($keywords, $batchSize);
 
-foreach ($batches as $i => $batch) {
-    echo "Processing batch " . ($i + 1) . "/" . count($batches) . "... ";
+foreach ($batches as $batchNum => $batch) {
+    echo "Processing batch " . ($batchNum + 1) . "/" . count($batches) . "... ";
     
-    $keywordList = implode("\n", $batch);
-    
-    $prompt = "Filter this list of keywords and return ONLY the ones that are in English. Exclude keywords in Spanish, French, German, Portuguese, Italian, Dutch, Indonesian, Arabic, Hindi, and all other non-English languages.
-
-Return ONLY a JSON array of English keywords. No explanation, no markdown formatting.
-
-Keywords:
-$keywordList
-
-Example response format:
-[\"weather\", \"arsenal vs aston villa\", \"new year's eve\"]";
+    $prompt = "Filter this list to ONLY keywords that are in English or are proper nouns (like brand names, place names, or people's names). Remove any keywords that are purely in other languages. Return ONLY the English keywords, one per line, with no explanations or extra text.\n\nKeywords:\n" . implode("\n", $batch);
     
     $ch = curl_init('https://api.x.ai/v1/chat/completions');
     curl_setopt_array($ch, [
@@ -142,52 +146,41 @@ Example response format:
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
-            "Authorization: Bearer $grokApiKey"
+            'Authorization: Bearer ' . $grokApiKey
         ],
         CURLOPT_POSTFIELDS => json_encode([
-            'model' => 'grok-4-1-fast-reasoning',
             'messages' => [
                 [
                     'role' => 'system',
-                    'content' => 'You are an English language filter. Return only valid JSON arrays.'
+                    'content' => 'You are a language filter. Return only English keywords from the provided list, one per line. No explanations.'
                 ],
                 [
                     'role' => 'user',
                     'content' => $prompt
                 ]
             ],
-            'temperature' => 0.1
+            'model' => 'grok-4-1-fast-reasoning',
+            'temperature' => 0.3
         ]),
-        CURLOPT_TIMEOUT => 60
+        CURLOPT_TIMEOUT => 30
     ]);
     
     $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     
-    if ($httpCode !== 200) {
-        echo "ERROR (HTTP $httpCode)\n";
-        continue;
-    }
-    
     $result = json_decode($response, true);
-    $content = $result['choices'][0]['message']['content'] ?? '';
+    $grokResponse = $result['choices'][0]['message']['content'] ?? '';
     
-    // Remove markdown fences
-    $content = preg_replace('/```json\s*|\s*```/', '', $content);
-    $content = trim($content);
+    $filtered = array_filter(
+        array_map('trim', explode("\n", $grokResponse)),
+        function($line) { return !empty($line); }
+    );
     
-    $filtered = json_decode($content, true);
+    $englishKeywords = array_merge($englishKeywords, $filtered);
     
-    if (is_array($filtered)) {
-        $englishKeywords = array_merge($englishKeywords, $filtered);
-        echo count($filtered) . " English\n";
-    } else {
-        echo "ERROR parsing response (JSON decode failed)\n";
-        echo "Raw content: " . substr($content, 0, 200) . "...\n";
-    }
+    echo count($filtered) . " English\n";
     
-    sleep(1); // Rate limit Grok API
+    sleep(1); // Rate limiting
 }
 
 echo "Total English keywords: " . count($englishKeywords) . "\n\n";
@@ -195,19 +188,33 @@ echo "Total English keywords: " . count($englishKeywords) . "\n\n";
 // STEP 3: Normalize and deduplicate
 echo "Normalizing and cleaning keywords...\n";
 
+function isCompleteSportsMatch($keyword) {
+    // Check if it looks like a complete match (team1 - team2 or team1 vs team2)
+    if (preg_match('/^.+?\s+(vs\.?|-|x)\s+.+$/i', $keyword)) {
+        return true;
+    }
+    return false;
+}
+
 function normalizeKeyword($keyword) {
     // Replace all dash variants with standard hyphen
     $normalized = preg_replace('/\s*[\-\x{2010}-\x{2015}\x{2212}]\s*/u', ' - ', $keyword);
+    
     // Normalize "vs" to "-"
     $normalized = preg_replace('/\s+vs\.?\s+/i', ' - ', $normalized);
+    
     // Normalize "x" to "-"
     $normalized = preg_replace('/\s+x\s+/i', ' - ', $normalized);
+    
     // Remove "f.c."
     $normalized = preg_replace('/\s+f\.c\.\s+/i', ' ', $normalized);
+    
     // Remove trailing words
     $normalized = preg_replace('/\s+(prediction|match|game|fixtures?|live|stream|highlights?)$/i', '', $normalized);
+    
     // Normalize whitespace
     $normalized = preg_replace('/\s+/', ' ', trim($normalized));
+    
     return $normalized;
 }
 
@@ -215,16 +222,22 @@ function normalizeKeyword($keyword) {
 $cleanTrends = [];
 $englishSet = array_flip($englishKeywords); // For fast lookup
 
-foreach ($rawTrends as $trend) {
+foreach ($allTrends as $trend) {
     $keyword = $trend['keyword'];
     
-    // Skip non-English
-    if (!isset($englishSet[$keyword])) {
-        continue;
+    // If it's a complete sports match, skip English check
+    if (isCompleteSportsMatch($keyword)) {
+        // Keep it even if team names aren't English
+    } else {
+        // Skip non-English for everything else
+        if (!isset($englishSet[$keyword])) {
+            continue;
+        }
     }
     
     // Normalize
     $normalized = normalizeKeyword($keyword);
+    
     $key = strtolower($normalized);
     
     // Aggregate by normalized keyword + country
@@ -239,22 +252,35 @@ foreach ($rawTrends as $trend) {
         ];
     }
     
-    $cleanTrends[$aggregateKey]['volume'] += $trend['volume'];
+    // Parse volume (remove commas, convert to int)
+    $volume = (int)str_replace([',', '+', 'K', 'M'], ['', '', '000', '000000'], $trend['volume']);
+    $cleanTrends[$aggregateKey]['volume'] += $volume;
 }
 
-echo "Clean trends after filtering: " . count($cleanTrends) . "\n\n";
+echo "Deduplicated to " . count($cleanTrends) . " unique trend-country pairs\n\n";
 
-// STEP 4: Write clean file
-file_put_contents($cleanFile, "# Clean Hourly Trends: " . date('Y-m-d H:i:s') . "\n");
-file_put_contents($cleanFile, "# Format: TIMESTAMP\tCOUNTRY\tKEYWORD\tVOLUME\n", FILE_APPEND);
+// Save clean data
+$cleanOutputFile = "$hourlyDir/$dateHour.log";
+echo "Saving clean data to $cleanOutputFile...\n";
+
+$fp = fopen($cleanOutputFile, 'w');
+fwrite($fp, "# Clean English-only Google Trends\n");
+fwrite($fp, "# Scraped at: $timestamp\n");
+fwrite($fp, "# Format: TIMESTAMP\\tCOUNTRY\\tKEYWORD\\tVOLUME\n");
 
 foreach ($cleanTrends as $trend) {
-    $line = $trend['timestamp'] . "\t" . $trend['country'] . "\t" . $trend['keyword'] . "\t" . $trend['volume'] . "\n";
-    file_put_contents($cleanFile, $line, FILE_APPEND);
+    fwrite($fp, implode("\t", [
+        $trend['timestamp'],
+        $trend['country'],
+        $trend['keyword'],
+        $trend['volume']
+    ]) . "\n");
 }
 
-echo str_repeat("=", 60) . "\n";
-echo "Hourly scrape complete!\n";
-echo "Raw file: $rawFile (" . count($rawTrends) . " trends)\n";
-echo "Clean file: $cleanFile (" . count($cleanTrends) . " trends)\n";
-echo "File size: " . number_format(filesize($cleanFile)) . " bytes\n";
+fclose($fp);
+
+echo "Clean data saved (" . count($cleanTrends) . " entries)\n";
+echo "\n" . str_repeat("=", 60) . "\n";
+echo "Scraping complete!\n";
+echo "Raw file: $rawOutputFile\n";
+echo "Clean file: $cleanOutputFile\n";
