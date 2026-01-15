@@ -1,7 +1,7 @@
 <?php
 // scrape_trends_hourly.php - Scrape current Google Trends from 125 countries
 
-$baseDir = '/var/www/morallyrelative.com/trends';
+$baseDir = '';
 $hourlyDir = "$baseDir/hourly";
 
 // Create hourly directory if it doesn't exist
@@ -56,10 +56,10 @@ foreach ($countries as $country) {
     
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => "https://google-trends-api3.p.rapidapi.com/trendingnow?geo=$country",
+        CURLOPT_URL => "https://google-trends-api4.p.rapidapi.com/api/v3/trends/nows?geo=$country",
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => [
-            'x-rapidapi-host: google-trends-api3.p.rapidapi.com',
+            'x-rapidapi-host: google-trends-api4.p.rapidapi.com',
             'x-rapidapi-key: ' . $rapidApiKey
         ],
         CURLOPT_TIMEOUT => 30
@@ -77,21 +77,21 @@ foreach ($countries as $country) {
     
     $data = json_decode($response, true);
     
-    if (!isset($data['data']) || !is_array($data['data'])) {
+    if (!isset($data['trendingNows']) || !is_array($data['trendingNows'])) {
         echo "ERROR (no data)\n";
         $errorCount++;
         continue;
     }
     
     // Take top 10 trends per country
-    $trends = array_slice($data['data'], 0, 10);
+    $trends = array_slice($data['trendingNows'], 0, 10);
     
     foreach ($trends as $trend) {
         $allTrends[] = [
             'timestamp' => $timestamp,
             'country' => $country,
-            'keyword' => $trend['title'] ?? '',
-            'volume' => $trend['formattedTraffic'] ?? '0'
+            'keyword' => $trend['keyword'] ?? '',
+            'volume' => $trend['searchVolume'] ?? 0
         ];
     }
     
@@ -125,7 +125,8 @@ foreach ($allTrends as $trend) {
 fclose($fp);
 echo "Raw data saved (" . count($allTrends) . " entries)\n\n";
 
-// STEP 2: Filter for English keywords using Grok
+// STEP 2: Filter for English keywords using Grok (COMMENTED OUT)
+/*
 echo "Filtering for English keywords using Grok AI...\n";
 
 $keywords = array_unique(array_column($allTrends, 'keyword'));
@@ -184,6 +185,12 @@ foreach ($batches as $batchNum => $batch) {
 }
 
 echo "Total English keywords: " . count($englishKeywords) . "\n\n";
+*/
+
+// TEMPORARY: Skip Grok filtering - new API returns clean English keywords
+$keywords = array_unique(array_column($allTrends, 'keyword'));
+$englishKeywords = $keywords;
+echo "Skipping English filter (API returns clean keywords) - using all " . count($englishKeywords) . " keywords\n\n";
 
 // STEP 3: Normalize and deduplicate
 echo "Normalizing and cleaning keywords...\n";
@@ -252,9 +259,8 @@ foreach ($allTrends as $trend) {
         ];
     }
     
-    // Parse volume (remove commas, convert to int)
-    $volume = (int)str_replace([',', '+', 'K', 'M'], ['', '', '000', '000000'], $trend['volume']);
-    $cleanTrends[$aggregateKey]['volume'] += $volume;
+    // Parse volume (already an integer from new API)
+    $cleanTrends[$aggregateKey]['volume'] += (int)$trend['volume'];
 }
 
 echo "Deduplicated to " . count($cleanTrends) . " unique trend-country pairs\n\n";
