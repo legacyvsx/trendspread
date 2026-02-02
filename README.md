@@ -12,13 +12,13 @@ I'm using a 3rd party API because pytrends stopped working a few months ago and 
 
 Make sure your API keys and paths are correctly listed at the top of each php file. You'll want to run these scripts in a crontab to automatically update daily. Here is mine:<br/><br/>
 
-<b>2.1.26</b>: Made some updates and the wordcloud and piechart now use the same data source which is obtained by the hourly scraper, hence the 3 entries below are commented out. Those files are no longer used and categorize_and_chart.php and generate_wordcloud_chartjs.php have been updated to use the correct data sources.
+<b>2.1.26</b>: Made some updates and the wordcloud and piechart now use the same data source which is obtained by the hourly scraper, hence the 2 entries below are commented out. Those files are no longer used and categorize_and_chart.php and generate_wordcloud_chartjs.php have been updated to use the correct data sources.
 
 <pre>
 # Daily trends pipeline (for word cloud/pie chart) - Run BEFORE hourly scrapes
 #0 0 * * * php scrape_trends.php >> ~/logs/trends_daily.log 2>&1
-#3 0 * * * php filter_trends.php >> ~/logs/trends_daily.log 2>&1
 #8 0 * * * php cleanup_duplicates.php >> ~/logs/trends_daily.log 2>&1
+3 0 * * * php filter_trends.php >> ~/logs/trends_daily.log 2>&1
 10 0 * * * php generate_wordcloud_chartjs.php >> ~/logs/trends_daily.log 2>&1
 11 0 * * * php categorize_and_chart.php >> ~/logs/trends_daily.log 2>&1
 
