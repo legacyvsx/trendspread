@@ -1,33 +1,94 @@
 <?php
 // categorize_and_chart.php - Categorize trends with Grok and generate pie chart
 
-$inputFile = 'trends_cleaned.log';
-$categoriesFile = 'categories.json';
-$chartFile = 'category_piechart.png';
+$baseDir = '';
+$hourlyDir = "$baseDir/hourly";
+$categoriesFile = "$baseDir/categories.json";
+$chartFile = "$baseDir/category_piechart.png";
 
 $grokApiKey = '';
 
 echo "Categorizing trends and generating pie chart...\n";
-echo "Input: $inputFile\n\n";
 
-// Read cleaned trends
-$lines = file($inputFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-array_shift($lines); // Remove headers
-array_shift($lines);
+// Get current date for filtering
+$targetDate = date('Y-m-d');
 
-$trends = [];
-foreach ($lines as $line) {
-    $parts = explode("\t", $line);
-    if (count($parts) < 3) continue;
+// Find all clean hourly files from today
+$allFiles = glob("$hourlyDir/*.log");
+$allFiles = array_filter($allFiles, function($file) {
+    return substr($file, -8) !== '-raw.log';
+});
+
+if (empty($allFiles)) {
+    die("ERROR: No hourly data files found\n");
+}
+
+// Filter to only files from today
+$todayFiles = array_filter($allFiles, function($file) use ($targetDate) {
+    return strpos(basename($file), $targetDate) === 0;
+});
+
+// Take the 5 most recent from today
+usort($todayFiles, function($a, $b) {
+    return filemtime($b) - filemtime($a);
+});
+$files = array_slice($todayFiles, 0, 5);
+
+if (empty($files)) {
+    die("ERROR: No hourly data files found for today ($targetDate)\n");
+}
+
+echo "Using " . count($files) . " hourly files from $targetDate:\n";
+foreach ($files as $file) {
+    echo "  - " . basename($file) . "\n";
+}
+echo "\n";
+
+// Load and aggregate all trends from hourly files
+$allTrends = [];
+foreach ($files as $file) {
+    echo "Loading " . basename($file) . "... ";
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     
-    list($keyword, $volume, $countryCount) = $parts;
+    $count = 0;
+    foreach ($lines as $line) {
+        if (substr($line, 0, 1) === '#') continue; // Skip headers
+        
+        $parts = explode("\t", $line);
+        if (count($parts) < 4) continue;
+        
+        list($timestamp, $country, $keyword, $volume) = $parts;
+        
+        $keyword = trim($keyword);
+        $volume = (int)$volume;
+        
+        if (!isset($allTrends[$keyword])) {
+            $allTrends[$keyword] = 0;
+        }
+        
+        $allTrends[$keyword] += $volume;
+        $count++;
+    }
+    
+    echo "$count entries loaded\n";
+}
+
+// Convert to the format expected by the rest of the script
+$trends = [];
+foreach ($allTrends as $keyword => $volume) {
     $trends[] = [
-        'keyword' => trim($keyword),
-        'volume' => (int)$volume
+        'keyword' => $keyword,
+        'volume' => $volume
     ];
 }
 
-echo "Total keywords to categorize: " . count($trends) . "\n\n";
+// Sort by volume
+usort($trends, function($a, $b) {
+    return $b['volume'] - $a['volume'];
+});
+
+echo "\nTotal unique keywords: " . count($trends) . "\n";
+echo "Total volume: " . array_sum(array_column($trends, 'volume')) . "\n\n";
 
 // Define categories
 $categories = [
@@ -172,9 +233,11 @@ echo str_repeat("=", 60) . "\n\n";
 // Generate pie chart using QuickChart
 echo "Generating pie chart...\n";
 
-// Format volume labels with K suffix
+// Format volume labels with K/M suffix
 function formatVolume($vol) {
-    if ($vol >= 1000) {
+    if ($vol >= 1000000) {
+        return round($vol / 1000000, 1) . 'M';
+    } elseif ($vol >= 1000) {
         return round($vol / 1000, 1) . 'k';
     }
     return $vol;

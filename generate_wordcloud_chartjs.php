@@ -1,30 +1,83 @@
 <?php
 // generate_wordcloud_chartjs.php - Generate Chart.js word cloud HTML
 
-$inputFile = 'trends_cleaned.log';
-$outputFile = 'wordcloud.html';
+$baseDir = '';
+$hourlyDir = "$baseDir/hourly";
+$outputFile = "$baseDir/wordcloud.html";
 
 echo "Generating Chart.js word cloud HTML...\n";
-echo "Input: $inputFile\n";
 
-// Read cleaned trends
-$lines = file($inputFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+// Get current date for filtering
+$targetDate = date('Y-m-d');
 
-// Skip header lines
-array_shift($lines);
-array_shift($lines);
+// Find all clean hourly files from today
+$allFiles = glob("$hourlyDir/*.log");
+$allFiles = array_filter($allFiles, function($file) {
+    return substr($file, -8) !== '-raw.log';
+});
 
-$trends = [];
-foreach ($lines as $line) {
-    $parts = explode("\t", $line);
-    if (count($parts) < 3) continue;
+if (empty($allFiles)) {
+    die("ERROR: No hourly data files found\n");
+}
+
+// Filter to only files from today
+$todayFiles = array_filter($allFiles, function($file) use ($targetDate) {
+    return strpos(basename($file), $targetDate) === 0;
+});
+
+// Take the 5 most recent from today
+usort($todayFiles, function($a, $b) {
+    return filemtime($b) - filemtime($a);
+});
+$files = array_slice($todayFiles, 0, 5);
+
+if (empty($files)) {
+    die("ERROR: No hourly data files found for today ($targetDate)\n");
+}
+
+echo "Using " . count($files) . " hourly files from $targetDate\n";
+
+// Load and aggregate all trends from hourly files
+$allTrends = [];
+foreach ($files as $file) {
+    echo "Loading " . basename($file) . "... ";
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     
-    list($keyword, $volume, $countryCount) = $parts;
+    $count = 0;
+    foreach ($lines as $line) {
+        if (substr($line, 0, 1) === '#') continue; // Skip headers
+        
+        $parts = explode("\t", $line);
+        if (count($parts) < 4) continue;
+        
+        list($timestamp, $country, $keyword, $volume) = $parts;
+        
+        $keyword = trim($keyword);
+        $volume = (int)$volume;
+        
+        if (!isset($allTrends[$keyword])) {
+            $allTrends[$keyword] = 0;
+        }
+        
+        $allTrends[$keyword] += $volume;
+        $count++;
+    }
+    
+    echo "$count entries loaded\n";
+}
+
+// Convert to array and sort by volume
+$trends = [];
+foreach ($allTrends as $keyword => $volume) {
     $trends[] = [
-        'keyword' => trim($keyword),
-        'volume' => (int)$volume
+        'keyword' => $keyword,
+        'volume' => $volume
     ];
 }
+
+usort($trends, function($a, $b) {
+    return $b['volume'] - $a['volume'];
+});
 
 // Increase to 100 keywords to fill more space
 $trends = array_slice($trends, 0, 100);
@@ -56,7 +109,7 @@ $html = <<<HTML
     <title>Google Trends Word Cloud</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-wordcloud@4.4.0/build/index.umd.min.js"></script>
-	<style>
+        <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
 
         body {
@@ -77,7 +130,7 @@ $html = <<<HTML
             padding: 20px;
             box-sizing: border-box;
         }
-        
+
         @media (max-width: 768px) {
             #container {
                 height: 600px;
@@ -90,12 +143,12 @@ $html = <<<HTML
     <div id="container">
         <canvas id="wordcloud"></canvas>
     </div>
-    
+
     <script>
         // Wait for font to load
         document.fonts.ready.then(function() {
             const ctx = document.getElementById('wordcloud').getContext('2d');
-            
+
             new Chart(ctx, {
                 type: 'wordCloud',
                 data: {
@@ -141,3 +194,4 @@ file_put_contents($outputFile, $html);
 echo "\n" . str_repeat("=", 60) . "\n";
 echo "HTML generated successfully!\n";
 echo "Saved to: $outputFile\n";
+echo "\nOpen in browser: http://morallyrelative.com/trends/wordcloud.html\n";
