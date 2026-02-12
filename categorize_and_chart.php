@@ -1,32 +1,62 @@
 <?php
 // categorize_and_chart.php - Categorize trends with Grok and generate pie chart
 
-$inputFile = 'trends_filtered.log';
-$categoriesFile = 'categories.json';
-$chartFile = 'category_piechart.png';
+$baseDir = '/var/www/morallyrelative.com/trends';
+$hourlyDir = "$baseDir/hourly";
+$categoriesFile = "$baseDir/categories.json";
+$chartFile = "$baseDir/category_piechart.png";
 
 $grokApiKey = '';
 
 echo "Categorizing trends and generating pie chart...\n";
-echo "Input: $inputFile\n\n";
 
-// Read filtered trends
-$lines = file($inputFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-array_shift($lines); // Remove header
-array_shift($lines);
+// Find today's hourly files (same logic as process_daily_spread.php)
+$targetDate = date('Y-m-d');
+$allFiles = glob("$hourlyDir/*.log");
+$allFiles = array_filter($allFiles, function($file) {
+    return substr($file, -8) !== '-raw.log';
+});
 
-$trends = [];
-foreach ($lines as $line) {
-    $parts = explode("\t", $line);
-    if (count($parts) < 3) continue;
-    
-    list($keyword, $volume, $countryCount) = $parts;
-    $trends[] = [
-        'keyword' => trim($keyword),
-        'volume' => (int)$volume
-    ];
+$todayFiles = array_filter($allFiles, function($file) use ($targetDate) {
+    return strpos(basename($file), $targetDate) === 0;
+});
+
+usort($todayFiles, function($a, $b) {
+    return filemtime($b) - filemtime($a);
+});
+$files = array_slice($todayFiles, 0, 5);
+
+if (empty($files)) {
+    die("ERROR: No hourly data files found for today ($targetDate)\n");
 }
 
+echo "Using " . count($files) . " hourly files from $targetDate\n";
+
+// Load and aggregate trends from hourly files
+$trendData = [];
+foreach ($files as $file) {
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (substr($line, 0, 1) === '#') continue;
+        $parts = explode("\t", $line);
+        if (count($parts) < 4) continue;
+        list($timestamp, $country, $keyword, $volume) = $parts;
+        $keyword = trim($keyword);
+        $vol = (int)$volume;
+        if (!isset($trendData[$keyword])) {
+            $trendData[$keyword] = 0;
+        }
+        $trendData[$keyword] += $vol;
+    }
+}
+
+// Convert to array format the rest of the script expects
+$trends = [];
+foreach ($trendData as $keyword => $volume) {
+    $trends[] = ['keyword' => $keyword, 'volume' => $volume];
+}
+
+echo "Input: hourly files\n\n";
 echo "Total keywords to categorize: " . count($trends) . "\n\n";
 
 // Define categories

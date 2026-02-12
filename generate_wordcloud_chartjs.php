@@ -1,29 +1,59 @@
 <?php
 // generate_wordcloud_chartjs.php - Generate Chart.js word cloud HTML
 
-$inputFile = 'trends_filtered.log';
-$outputFile = 'wordcloud.html';
+$baseDir = '/var/www/morallyrelative.com/trends';
+$hourlyDir = "$baseDir/hourly";
+$outputFile = "$baseDir/wordcloud.html";
 
 echo "Generating Chart.js word cloud HTML...\n";
-echo "Input: $inputFile\n";
 
-// Read filtered trends
-$lines = file($inputFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+// Find today's hourly files (same logic as process_daily_spread.php)
+$targetDate = date('Y-m-d');
+$allFiles = glob("$hourlyDir/*.log");
+$allFiles = array_filter($allFiles, function($file) {
+    return substr($file, -8) !== '-raw.log';
+});
 
-// Skip header lines
-array_shift($lines);
-array_shift($lines);
+$todayFiles = array_filter($allFiles, function($file) use ($targetDate) {
+    return strpos(basename($file), $targetDate) === 0;
+});
 
+usort($todayFiles, function($a, $b) {
+    return filemtime($b) - filemtime($a);
+});
+$files = array_slice($todayFiles, 0, 5);
+
+if (empty($files)) {
+    die("ERROR: No hourly data files found for today ($targetDate)\n");
+}
+
+echo "Input: hourly files (" . count($files) . " from $targetDate)\n";
+
+// Load and aggregate trends from hourly files
+$trendData = [];
+foreach ($files as $file) {
+    $lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (substr($line, 0, 1) === '#') continue;
+        $parts = explode("\t", $line);
+        if (count($parts) < 4) continue;
+        list($timestamp, $country, $keyword, $volume) = $parts;
+        $keyword = trim($keyword);
+        $vol = (int)$volume;
+        if (!isset($trendData[$keyword])) {
+            $trendData[$keyword] = 0;
+        }
+        $trendData[$keyword] += $vol;
+    }
+}
+
+// Sort by volume descending
+arsort($trendData);
+
+// Convert to array format
 $trends = [];
-foreach ($lines as $line) {
-    $parts = explode("\t", $line);
-    if (count($parts) < 3) continue;
-
-    list($keyword, $volume, $countryCount) = $parts;
-    $trends[] = [
-        'keyword' => trim($keyword),
-        'volume' => (int)$volume
-    ];
+foreach ($trendData as $keyword => $volume) {
+    $trends[] = ['keyword' => $keyword, 'volume' => $volume];
 }
 
 // Increase to 100 keywords to fill more space
