@@ -50,6 +50,15 @@ foreach ($files as $file) {
 // Sort by volume descending
 arsort($trendData);
 
+// Filter to ASCII-only keywords (removes foreign scripts)
+function isAsciiKeyword($keyword) {
+    return mb_detect_encoding($keyword, 'ASCII', true) !== false;
+}
+
+$trendData = array_filter($trendData, function($vol, $keyword) {
+    return isAsciiKeyword($keyword);
+}, ARRAY_FILTER_USE_BOTH);
+
 // Convert to array format
 $trends = [];
 foreach ($trendData as $keyword => $volume) {
